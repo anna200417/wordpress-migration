@@ -1,0 +1,29 @@
+buildPack: classic
+pipelineConfig:
+  pipelines:
+    release:
+      pipeline:
+        agent:
+          image: docker:20.10
+        stages:
+          - name: Build Docker
+            steps:
+              - command: docker build -t anna408/wordpress-legacy:0.1.0 .
+                name: docker-build
+          - name: Test
+            steps:
+              - command: echo "Exécuter vos tests unitaires ici"
+                name: run-tests
+          - name: Scan sécurité
+            steps:
+              - command: trivy image --exit-code 1 --severity HIGH,CRITICAL anna408/wordpress-legacy:0.1.0
+                name: trivy-scan
+          - name: Push Docker
+            steps:
+              - command: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+              - command: docker push anna408/wordpress-legacy:0.1.0
+                name: docker-push
+          - name: Deploy staging
+            steps:
+              - command: kubectl apply -f k8s/staging/
+                name: deploy-staging

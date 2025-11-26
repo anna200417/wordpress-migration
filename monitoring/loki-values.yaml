@@ -1,0 +1,15 @@
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+
+promtail:
+  enabled: true
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: admin
+  service:
+    type: ClusterIP

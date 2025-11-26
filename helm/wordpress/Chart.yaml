@@ -1,0 +1,5 @@
+apiVersion: v2
+name: wordpress-legacy
+version: 0.1.0
+description: WordPress legacy migration
+appVersion: "6.4"

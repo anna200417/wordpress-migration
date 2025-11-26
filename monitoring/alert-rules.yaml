@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: wordpress-alerts
+  namespace: default
+  labels:
+    release: prometheus
+spec:
+  groups:
+  - name: wordpress-alerts
+    rules:
+    - alert: WordpressDown
+      expr: absent(up{job="wordpress-legacy"})
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "WordPress pod is down"
+        description: "WordPress pod has not been reachable for more than 2 minutes."

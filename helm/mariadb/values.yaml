@@ -1,0 +1,8 @@
+replicas: 1
+
+storage:
+  size: 5Gi
+
+image:
+  repository: mariadb
+  tag: "11"

@@ -1,0 +1,17 @@
+replicaCount: 1
+
+image:
+  repository: anna408/wordpress-legacy
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+wordpress:
+  env:
+    WORDPRESS_DB_HOST: mariadb.default.svc.cluster.local:3306
+    WORDPRESS_DB_NAME: wordpress
+    WORDPRESS_DB_USER: anna
+    WORDPRESS_DB_PASSWORD: Nanachou17

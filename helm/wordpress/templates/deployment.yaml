@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wordpress-legacy.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "wordpress-legacy.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "wordpress-legacy.name" . }}
+    spec:
+      containers:
+        - name: wordpress
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 80
+          env: {{- range $k, $v := .Values.wordpress.env }}
+            - name: {{ $k }}
+              value: "{{ $v }}"
+          {{- end }}

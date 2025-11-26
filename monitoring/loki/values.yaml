@@ -1,0 +1,19 @@
+loki:
+  auth_enabled: false
+
+  storage:
+    type: filesystem
+    filesystem:
+      directory: /data/loki
+    # Bucket names not required for filesystem
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 2Gi
+
+promtail:
+  enabled: true
+  serviceAccount:
+    create: true

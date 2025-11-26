@@ -1,0 +1,25 @@
+loki:
+  auth_enabled: false
+
+  config:
+    table_manager:
+      retention_deletes_enabled: false
+      retention_period: 0
+
+    schema_config:
+      configs:
+        - from: 2020-10-15
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+  persistence:
+    enabled: false
+
+promtail:
+  enabled: true
+  serviceAccount:
+    create: true

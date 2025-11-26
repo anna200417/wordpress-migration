@@ -1,52 +1,15 @@
 pipeline {
-    agent {
-        kubernetes {
-            label 'kaniko-agent'
-            defaultContainer 'kaniko'
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    jenkins: kaniko
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
-    args:
-    - "--dockerfile=Dockerfile"
-    - "--context=."
-    - "--destination=anna408/wordpress-legacy:0.1.0"
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
-  volumes:
-  - name: docker-config
-    projected:
-      sources:
-      - secret:
-          name: docker-hub-credentials
-          items:
-          - key: .dockerconfigjson
-            path: config.json
-"""
-        }
+    agent any
+    environment {
+        KUBECONFIG_CREDENTIALS = credentials('kubeconfig-credentials') // si besoin
     }
-
     stages {
-
-        stage('Build & Push Docker image with Kaniko') {
+        stage('Deploy Staging') {
             steps {
-                container('kaniko') {
-                    sh '''
-                        echo "Kaniko building and pushing image..."
-                    '''
-                }
-            }
-        }
+                // Optionnel : si tu as besoin de kubeconfig
+                // sh 'echo "$KUBECONFIG_CREDENTIALS" > /tmp/kubeconfig && export KUBECONFIG=/tmp/kubeconfig'
 
-        stage('Deploy to Staging') {
-            steps {
+                // Applique les manifests K8s pour staging
                 sh 'kubectl apply -f k8s/staging/'
             }
         }

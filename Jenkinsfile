@@ -1,21 +1,51 @@
 pipeline {
-    agent any
-    environment {
-        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
+    agent {
+        kubernetes {
+            label 'kaniko-agent'
+            defaultContainer 'kaniko'
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args:
+    - "--dockerfile=Dockerfile"
+    - "--context=."
+    - "--destination=anna408/wordpress-legacy:0.1.0"
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: docker-config
+    projected:
+      sources:
+      - secret:
+          name: docker-hub-credentials
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+"""
+        }
     }
+
     stages {
-        stage('Build Docker') {
+
+        stage('Build & Push Docker image with Kaniko') {
             steps {
-                sh 'docker build -t anna408/wordpress-legacy:0.1.0 .'
+                container('kaniko') {
+                    sh '''
+                        echo "Kaniko building and pushing image..."
+                    '''
+                }
             }
         }
-        stage('Push Docker') {
-            steps {
-                sh "echo ${DOCKER_CREDENTIALS_PSW} | docker login -u ${DOCKER_CREDENTIALS_USR} --password-stdin"
-                sh 'docker push anna408/wordpress-legacy:0.1.0'
-            }
-        }
-        stage('Deploy Staging') {
+
+        stage('Deploy to Staging') {
             steps {
                 sh 'kubectl apply -f k8s/staging/'
             }

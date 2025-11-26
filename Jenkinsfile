@@ -1,6 +1,8 @@
 pipeline {
     agent any
-
+    environment {
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
+    }
     stages {
         stage('Build Docker') {
             steps {
@@ -9,7 +11,7 @@ pipeline {
         }
         stage('Push Docker') {
             steps {
-                sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                sh "echo ${DOCKER_CREDENTIALS_PSW} | docker login -u ${DOCKER_CREDENTIALS_USR} --password-stdin"
                 sh 'docker push anna408/wordpress-legacy:0.1.0'
             }
         }

@@ -2,15 +2,22 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG_CRED = credentials('docker-hub-credentials')
+        IMAGE_NAME = 'anna408/wordpress-legacy'
+        IMAGE_TAG = '0.1.0'
     }
 
     stages {
-        stage('Deploy Staging') {
+        stage('Checkout') {
             steps {
-                sh 'echo "$KUBECONFIG_CRED" > /tmp/kubeconfig && export KUBECONFIG=/tmp/kubeconfig'
-                sh 'kubectl apply -f k8s/staging/'
-                sh 'kubectl get pods -n staging'
+                git url: 'https://github.com/anna200417/wordpress.git', branch: 'main'
+            }
+        }
+
+        stage('Build Docker') {
+            steps {
+                script {
+                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                }
             }
         }
     }

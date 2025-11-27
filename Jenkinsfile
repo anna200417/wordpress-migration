@@ -1,22 +1,42 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: kubectl
+      image: bitnami/kubectl:latest
+      command:
+        - cat
+      tty: true
+"""
+        }
+    }
 
     environment {
-        IMAGE_NAME = 'anna408/wordpress-legacy'
-        IMAGE_TAG = '0.1.0'
+        KUBECONFIG_CRED = credentials('docker-hub-credentials')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/anna200417/wordpress.git', branch: 'main'
+                checkout scm
             }
         }
 
-        stage('Build Docker') {
+        stage('Deploy Staging') {
             steps {
-                script {
-                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                container('kubectl') {
+                    sh '''
+                        echo "$KUBECONFIG_CRED" > /tmp/kubeconfig
+                        export KUBECONFIG=/tmp/kubeconfig
+                        kubectl version --client
+
+                        kubectl apply -f k8s/staging/
+                        kubectl get pods -n staging
+                    '''
                 }
             }
         }

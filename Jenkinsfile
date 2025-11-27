@@ -1,16 +1,21 @@
 pipeline {
     agent any
+
     environment {
-        KUBECONFIG_CREDENTIALS = credentials('kubeconfig-credentials') // si besoin
+        KUBECONFIG_CRED = credentials('kubeconfig-credentials') // ton credential pour kubectl
     }
+
     stages {
         stage('Deploy Staging') {
             steps {
-                // Optionnel : si tu as besoin de kubeconfig
-                // sh 'echo "$KUBECONFIG_CREDENTIALS" > /tmp/kubeconfig && export KUBECONFIG=/tmp/kubeconfig'
-
-                // Applique les manifests K8s pour staging
+                // On exporte le kubeconfig pour kubectl
+                sh 'echo "$KUBECONFIG_CRED" > /tmp/kubeconfig && export KUBECONFIG=/tmp/kubeconfig'
+                
+                // On applique les manifests Kubernetes du staging
                 sh 'kubectl apply -f k8s/staging/'
+                
+                // Optionnel : vérifier le statut des pods
+                sh 'kubectl get pods -n staging'
             }
         }
     }

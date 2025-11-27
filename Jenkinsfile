@@ -1,51 +1,24 @@
-podTemplate(
-  containers: [
-    containerTemplate(
-      name: 'docker',
-      image: 'docker:24.0.6-dind',
-      command: 'dockerd-entrypoint.sh',
-      args: '--host=tcp://0.0.0.0:2375 --host=unix:///var/run/docker.sock',
-      privileged: true,
-      ttyEnabled: true,
-      volumeMounts: [
-        volumeMount(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
-      ]
-    ),
-    containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:3345.v03dee9b_f88fc-1',
-      ttyEnabled: true,
-      volumeMounts: [
-        volumeMount(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
-      ]
-    )
-  ],
-  volumes: [
-    emptyDirVolume(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
-  ]
-) {
-  node('docker') {
-    stage('Checkout') {
-      checkout scm
+pipeline {
+    agent any
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
+        IMAGE_NAME = "anna408/wordpress-legacy"
+        IMAGE_TAG = "0.1.0"
     }
-
-    stage('Build Docker Image') {
-      container('docker') {
-        sh """
-          docker build -t anna408/wordpress-legacy:0.1.0 -f Dockerfile .
-        """
-      }
-    }
-
-    stage('Push Docker Image') {
-      container('docker') {
-        withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PSW', usernameVariable: 'DOCKER_USER')]) {
-          sh """
-            echo $DOCKER_PSW | docker login -u $DOCKER_USER --password-stdin
-            docker push anna408/wordpress-legacy:0.1.0
-          """
+    stages {
+        stage('Clone & Build Docker') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'credential',
+                    url: 'https://github.com/anna200417/wordpress-migration.git'
+                sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
+            }
         }
-      }
+        stage('Push Docker') {
+            steps {
+                sh "echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin"
+                sh "docker push $IMAGE_NAME:$IMAGE_TAG"
+            }
+        }
     }
-  }
 }

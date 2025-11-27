@@ -1,74 +1,51 @@
-pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: jenkins-agent
-spec:
-  serviceAccountName: default
-  containers:
-    - name: docker
-      image: docker:24.0.6-dind
-      securityContext:
-        privileged: true
-      tty: true
-      command: [ "dockerd-entrypoint.sh" ]
-      args: [ "--host=tcp://0.0.0.0:2375", "--host=unix:///var/run/docker.sock" ]
-      volumeMounts:
-        - name: dind-storage
-          mountPath: /var/lib/docker
-
-    - name: kubectl
-      image: lachlanevenson/k8s-helm:latest
-      command: [ "cat" ]
-      tty: true
-
-  volumes:
-    - name: dind-storage
-      emptyDir: {}
-"""
-            defaultContainer 'docker'
-        }
+podTemplate(
+  containers: [
+    containerTemplate(
+      name: 'docker',
+      image: 'docker:24.0.6-dind',
+      command: 'dockerd-entrypoint.sh',
+      args: '--host=tcp://0.0.0.0:2375 --host=unix:///var/run/docker.sock',
+      privileged: true,
+      ttyEnabled: true,
+      volumeMounts: [
+        volumeMount(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
+      ]
+    ),
+    containerTemplate(
+      name: 'jnlp',
+      image: 'jenkins/inbound-agent:3345.v03dee9b_f88fc-1',
+      ttyEnabled: true,
+      volumeMounts: [
+        volumeMount(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
+      ]
+    )
+  ],
+  volumes: [
+    emptyDirVolume(mountPath: '/home/jenkins/agent', name: 'workspace-volume')
+  ]
+) {
+  node('docker') {
+    stage('Checkout') {
+      checkout scm
     }
 
-    environment {
-        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')  // tes credentials Docker Hub
-        IMAGE_NAME = "anna408/wordpress-legacy"
-        IMAGE_TAG = "0.1.0"
+    stage('Build Docker Image') {
+      container('docker') {
+        sh """
+          docker build -t anna408/wordpress-legacy:0.1.0 -f Dockerfile .
+        """
+      }
     }
 
-    stages {
-
-        stage('Clone repository') {
-            steps {
-                container('docker') {
-                    git branch: 'main',
-                        credentialsId: 'credential', // ton credential GitHub
-                        url: 'https://github.com/anna200417/wordpress-migration.git'
-                }
-            }
+    stage('Push Docker Image') {
+      container('docker') {
+        withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PSW', usernameVariable: 'DOCKER_USER')]) {
+          sh """
+            echo $DOCKER_PSW | docker login -u $DOCKER_USER --password-stdin
+            docker push anna408/wordpress-legacy:0.1.0
+          """
         }
-
-        stage('Build Docker image') {
-            steps {
-                container('docker') {
-                    sh """
-                        docker build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile .
-                    """
-                }
-            }
-        }
-
-        stage('Login & Push to Docker Hub') {
-            steps {
-                container('docker') {
-                    sh "echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin"
-                    sh "docker push $IMAGE_NAME:$IMAGE_TAG"
-                }
-            }
-        }
+      }
     }
+  }
 }
